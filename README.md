@@ -1,5 +1,7 @@
 # Exact 5G NR timing boundaries and modular integrity checks
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22314210.svg)](https://doi.org/10.5281/zenodo.22314210)
+
 This repository contains the corrected, reproducible companion material for the preprint **Exact Timing Boundaries and Modular Integrity Checks for 5G NR Numerologies** by Reinaldo Valeris and Gustavo Matheus.
 
 ## What is established
@@ -53,9 +55,13 @@ The VHDL block is a transparent reference monitor, not a published area or power
 
 ## Citation and DOI
 
-Citation metadata are in `CITATION.cff`. The first public release is intended to be archived through Zenodo; the DOI will be inserted here after Zenodo completes the archive.
+Citation metadata are in `CITATION.cff`. Zenodo provides two persistent identifiers:
+
+- All versions and future releases: [10.5281/zenodo.22314210](https://doi.org/10.5281/zenodo.22314210)
+- Archived release `v1.0.0`: [10.5281/zenodo.22314211](https://doi.org/10.5281/zenodo.22314211)
+
+Use the version DOI when citing the exact artifact evaluated in this release. Use the all-versions DOI when referring to the evolving project.
 
 ## Licenses
 
 Source code and VHDL are licensed under the MIT License. The manuscript and explanatory documentation are licensed under Creative Commons Attribution 4.0 International; see `LICENSE-DOCUMENTATION`.
-

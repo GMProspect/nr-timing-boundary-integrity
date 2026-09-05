@@ -3,7 +3,8 @@ message: "If you use this work, please cite the archived release."
 title: "Exact Timing Boundaries and Modular Integrity Checks for 5G NR Numerologies"
 type: software
 version: 1.0.0
-date-released: 2026-09-04
+date-released: 2026-09-05
+doi: "10.5281/zenodo.22314211"
 authors:
   - family-names: Valeris
     given-names: Reinaldo
@@ -26,4 +27,3 @@ keywords:
   - timing integrity
 license: MIT
 repository-code: "https://github.com/GMProspect/nr-timing-boundary-integrity"
-
