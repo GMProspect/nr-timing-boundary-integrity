@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the archived release."
+title: "Exact Timing Boundaries and Modular Integrity Checks for 5G NR Numerologies"
+type: software
+version: 1.0.0
+date-released: 2026-09-04
+authors:
+  - family-names: Valeris
+    given-names: Reinaldo
+    orcid: "https://orcid.org/0009-0007-8056-1113"
+    affiliation: "Universidad Jose Gregorio Hernandez"
+  - family-names: Matheus
+    given-names: Gustavo
+    orcid: "https://orcid.org/0009-0000-8394-4418"
+    affiliation: "Instituto Universitario Politecnico Santiago Marino"
+abstract: >-
+  Reproducible derivation of exact normal-cyclic-prefix slot boundaries for
+  5G NR numerologies, a rigorous distinction between abstract slot-index
+  groups and physical boundary sets, and a bounded analysis of residue-vector
+  timing-integrity checks with Python and VHDL reference implementations.
+keywords:
+  - 5G NR
+  - cyclic prefix
+  - modular arithmetic
+  - numerology
+  - timing integrity
+license: MIT
+repository-code: "https://github.com/GMProspect/nr-timing-boundary-integrity"
+

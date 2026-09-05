@@ -1,0 +1,274 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{Exact Timing Boundaries and Modular Integrity Checks for 5G NR Numerologies}
+\author{
+Reinaldo Valeris\thanks{Universidad Jos\'e Gregorio Hern\'andez, Maracaibo, Venezuela. ORCID: \href{https://orcid.org/0009-0007-8056-1113}{0009-0007-8056-1113}.}
+\and
+Gustavo Matheus\thanks{Instituto Universitario Polit\'ecnico Santiago Mari\~no, Maracaibo, Venezuela. ORCID: \href{https://orcid.org/0009-0000-8394-4418}{0009-0000-8394-4418}.}
+}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper gives a reproducible arithmetic description of slot boundaries for the normal cyclic prefix in 5G New Radio.  The derivation is stated in the fundamental time unit of 3GPP TS~38.211 and therefore covers the standardized subcarrier-spacing configurations from $\mu=0$ through $\mu=6$.  It distinguishes the nominal slot duration from the exact sample count of an individual slot, whose length depends on the cyclic-prefix extension schedule.  The resulting boundary sets are nested across numerologies, but they are not additive subgroups of the subframe clock.  A valid algebraic description is instead obtained from cyclic groups of abstract slot indices together with non-homomorphic physical-time maps.  The frequently observed value 137 at $\mu=4$ is shown to be a property of the 30.72~MHz reference-grid representation, not a failure of the 5G NR timing structure.  Finally, a residue-vector construction is analyzed as a bounded integrity check.  Its collision conditions and software cost are made explicit, and it is not presented as a substitute for signal-based timing acquisition.  Python tests and a synthesizable VHDL reference monitor accompany the analysis.
+\end{abstract}
+
+\noindent\textbf{Keywords:} 5G NR; cyclic prefix; modular arithmetic; numerology; timing integrity
+
+\section{Introduction}
+
+The scalable subcarrier spacing of 5G New Radio (NR) is commonly summarized by
+\begin{equation}
+    \Delta f_\mu = 2^\mu \times 15\ \text{kHz}.
+    \label{eq:scs}
+\end{equation}
+For normal cyclic prefix (CP), a slot contains 14 OFDM symbols and the nominal number of slots in a 1~ms subframe is $2^\mu$.  This power-of-two scaling makes multi-numerology boundary alignment easy to state at the slot-index level.  The exact physical-time statement is subtler because two OFDM symbols per subframe receive an additional CP extension.  Consequently, individual slot lengths need not equal the average subframe length divided by $2^\mu$.
+
+This distinction matters mathematically and computationally.  Replacing exact boundary positions by average lengths can shift a predicted boundary by several samples on a 30.72~MHz reference grid.  It also leads to an incorrect group-theoretic claim: a nested family of boundary sets is not automatically a tower of additive subgroups.  The present work reconstructs the argument from the normative timing equations and separates three objects that must not be conflated: (i) the abstract cyclic group of slot labels; (ii) the exact set of physical slot-start times within a subframe; and (iii) an implementation-specific clock or sample grid.
+
+The paper makes four bounded contributions.  First, it derives exact normal-CP slot lengths and boundary positions for $\mu=0,\ldots,6$ in the fundamental 3GPP time unit.  Second, it proves boundary nesting while giving a counterexample to additive closure.  Third, it identifies the correct abstract cyclic-group embedding and its relation to the physical-time map.  Fourth, it characterizes residue vectors as bounded integrity signatures, including their collision domain and their appropriate baseline.  No claim is made that residue comparison performs timing acquisition from received IQ samples; acquisition and estimation remain signal-processing tasks such as correlation or maximum-likelihood synchronization~\cite{schmidl1997,vandebeek1997}.
+
+\section{Normative Timing Model}
+
+\subsection{Fundamental time units and supported numerologies}
+
+3GPP TS~38.211 defines the fundamental time unit
+\begin{equation}
+    T_c = \frac{1}{\Delta f_{\max}N_f},
+    \qquad \Delta f_{\max}=480\ \text{kHz},\quad N_f=4096,
+    \label{eq:tc}
+\end{equation}
+and the older reference unit $T_s=1/(15\ \text{kHz}\times 2048)$, with $\kappa=T_s/T_c=64$~\cite{etsi38211}.  The standard lists subcarrier-spacing configurations $\mu=0,\ldots,6$; normal CP is supported across those configurations, while extended CP is a separate case associated with $\mu=2$.  This paper treats normal CP only.
+
+The $30.72$~MHz quantity is therefore best understood here as the reciprocal of $T_s$, a convenient reference grid rather than a mandatory receiver sampling rate.  Calculations in $T_c$ ticks remain integral for all $\mu=0,\ldots,6$.  Projection onto the $T_s$ grid is used only when the projected symbol quantities are integral, namely $\mu\leq4$ for the formulas below.
+
+\subsection{Exact normal-CP symbol schedule}
+
+Let $l$ denote the OFDM-symbol index within a subframe.  In $T_c$ ticks, the useful symbol duration and the normal short CP duration are
+\begin{align}
+    N_{u}^{(\mu)} &= 2048\kappa 2^{-\mu},\\
+    N_{\mathrm{CP,short}}^{(\mu)} &= 144\kappa 2^{-\mu}.
+    \label{eq:symbolbase}
+\end{align}
+An additional $16\kappa$ ticks are applied at $l=0$ and $l=7\cdot2^\mu$ within each subframe~\cite[Sec.~5.3.1]{etsi38211}.  Hence
+\begin{equation}
+N_{\mathrm{CP},l}^{(\mu)}=
+144\kappa 2^{-\mu}+
+\begin{cases}
+16\kappa, & l\in\{0,7\cdot2^\mu\},\\
+0, & \text{otherwise.}
+\end{cases}
+\label{eq:cp}
+\end{equation}
+
+Let $S_\mu=(2048+144)\kappa2^{-\mu}$ be the duration of a symbol with the short normal CP.  For $\mu=0$, both CP extensions occur inside the only slot.  For $\mu\geq1$, one extension occurs in slot 0 and the other in slot $2^{\mu-1}$.  The exact length $L_{\mu,j}$ of slot $j$ is therefore
+\begin{equation}
+L_{\mu,j}=
+\begin{cases}
+14S_0+2(16\kappa), & \mu=0,\\
+14S_\mu+16\kappa, & \mu\geq1,\ j\in\{0,2^{\mu-1}\},\\
+14S_\mu, & \mu\geq1,\ \text{otherwise.}
+\end{cases}
+\label{eq:slotlength}
+\end{equation}
+Summing over all $2^\mu$ slots gives
+\begin{equation}
+    \sum_{j=0}^{2^\mu-1}L_{\mu,j}=1{,}966{,}080\ T_c=1\ \text{ms}.
+    \label{eq:subframe}
+\end{equation}
+
+Table~\ref{tab:slot-ts} shows the exact projection onto the $30.72$~MHz reference grid for $\mu\leq4$.  It exposes the error in treating $30720/2^\mu$ as the length of every slot.  That quotient is the average slot length; it is not the length of each slot for $\mu\geq2$.
+
+\begin{table}[ht]
+\centering
+\caption{Exact normal-CP slot lengths on the 30.72~MHz reference grid.}
+\label{tab:slot-ts}
+\small
+\begin{tabular}{c c p{8.4cm}}
+\toprule
+$\mu$ & Average & Exact slot lengths within one subframe \\
+\midrule
+0 & 30720 & 30720 \\
+1 & 15360 & 15360, 15360 \\
+2 & 7680 & 7688, 7672, 7688, 7672 \\
+3 & 3840 & 3852, 3836, 3836, 3836, 3852, 3836, 3836, 3836 \\
+4 & 1920 & 1934, then seven slots of 1918, followed by the same pattern \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Boundary Nesting and the Correct Algebraic Object}
+
+\subsection{Exact boundary sets}
+
+Let $T=1{,}966{,}080$ be the number of $T_c$ ticks in a subframe.  Define the slot-start map
+\begin{equation}
+    \tau_\mu(k)=\sum_{j=0}^{k-1}L_{\mu,j},
+    \qquad k\in\{0,\ldots,2^\mu-1\},
+    \label{eq:tau}
+\end{equation}
+with $\tau_\mu(0)=0$, and let
+\begin{equation}
+    B_\mu=\{\tau_\mu(k):0\leq k<2^\mu\}\subset\mathbb{Z}/T\mathbb{Z}
+    \label{eq:bset}
+\end{equation}
+be the exact set of slot starts.
+
+\begin{theorem}[Boundary nesting]
+For normal CP and $0\leq\mu<\nu\leq6$, every $\mu$-slot boundary is also a $\nu$-slot boundary; equivalently, $B_\mu\subset B_\nu$.
+\end{theorem}
+
+\begin{proof}
+A $\mu$ slot contains 14 consecutive symbols at spacing configuration $\mu$.  Under the scaling in Eq.~\eqref{eq:scs}, the same subframe interval is partitioned into $2^{\nu-\mu}$ times as many $\nu$ slots.  Equations~\eqref{eq:cp}--\eqref{eq:slotlength} place the two CP extensions at the same absolute subframe instants for every numerology.  Summing the fine-slot lengths over each block of $2^{\nu-\mu}$ slots therefore reproduces the corresponding coarse-slot length.  Thus
+\begin{equation}
+    \tau_\mu(k)=\tau_\nu\!\left(2^{\nu-\mu}k\right),
+    \label{eq:nestingmap}
+\end{equation}
+which proves the inclusion.
+\end{proof}
+
+The repository tests evaluate Eq.~\eqref{eq:nestingmap} for every ordered pair $0\leq\mu\leq\nu\leq6$ using the exact integer schedule in $T_c$ ticks.
+
+\subsection{Why the physical boundaries are not subgroups}
+
+Nesting alone does not imply additive closure.  On the 30.72~MHz grid, the $\mu=2$ boundary set is
+\begin{equation}
+    B_2=\{0,7688,15360,23048\}\subset\mathbb{Z}/30720\mathbb{Z}.
+\end{equation}
+However,
+\begin{equation}
+    7688+7688\equiv15376\pmod{30720},
+\end{equation}
+and $15376\notin B_2$.  Therefore $B_2$ is not a subgroup.  The same issue invalidates a claimed tower of physical boundary subgroups when exact CP timing is used.
+
+\subsection{Abstract slot-index groups}
+
+There is nevertheless a valid cyclic-group structure.  Let
+\begin{equation}
+    C_\mu=\mathbb{Z}/2^\mu\mathbb{Z}
+\end{equation}
+represent slot labels within a subframe.  For $\mu<\nu$, the map
+\begin{equation}
+    \iota_{\mu,\nu}:C_\mu\longrightarrow C_\nu,
+    \qquad [k]_{2^\mu}\longmapsto[2^{\nu-\mu}k]_{2^\nu}
+    \label{eq:embedding}
+\end{equation}
+is an injective group homomorphism.  It identifies each coarse slot label with the corresponding fine-grid label.  The physical-time map $\tau_\mu:C_\mu\to B_\mu$, by contrast, is a bijection of sets but generally not a group homomorphism because the exact slot lengths are nonuniform.  Equation~\eqref{eq:nestingmap} is a commuting relation between the index embedding and physical-time maps; it is the precise algebraic statement behind boundary nesting.
+
+\section{The Value 137 on the 30.72 MHz Reference Grid}
+
+For $\mu\leq4$, division of Eq.~\eqref{eq:symbolbase} by $\kappa$ gives integral $T_s$-grid counts.  A short-normal-CP symbol has
+\begin{equation}
+    \frac{2048+144}{2^\mu}=\frac{2192}{2^\mu}=2^{4-\mu}\cdot137
+    \label{eq:137}
+\end{equation}
+reference samples.  At $\mu=4$, this quantity equals the prime number 137.  Two qualifications prevent overinterpretation.
+
+First, 137 describes a short-normal-CP symbol on one reference grid.  The two extended symbols in the subframe have 153 samples at $\mu=4$, and exact slot lengths are 1934 or 1918 samples rather than $14\times137=1918$ uniformly.  Second, a prime counter modulus does not by itself establish increased FPGA area, memory inefficiency, or synchronization difficulty.  Such statements require synthesis and implementation data against a defined architecture, technology, clock constraint, and baseline.  The arithmetic fact in Eq.~\eqref{eq:137} is retained; unsupported hardware consequences are not.
+
+\section{Residue Vectors as Bounded Integrity Signatures}
+
+\subsection{Definition and collision theorem}
+
+Let $m_1,\ldots,m_r>1$ be pairwise coprime and define
+\begin{equation}
+    R(n)=(n\bmod m_1,\ldots,n\bmod m_r),
+    \qquad M=\prod_{i=1}^r m_i.
+    \label{eq:signature}
+\end{equation}
+This construction is a residue-number representation, a well-established technique in digital arithmetic~\cite{soderstrand1986}.
+
+\begin{proposition}[Exact condition]
+For integers $a$ and $b$, $R(a)=R(b)$ if and only if $a\equiv b\pmod M$.  Consequently, $R$ is collision-free on any interval whose width is less than $M$.
+\end{proposition}
+
+\begin{proof}
+Equality of the residue vectors is equivalent to $m_i\mid(a-b)$ for every $i$.  Pairwise coprimality and the Chinese Remainder Theorem imply $M\mid(a-b)$.  The converse is immediate.  If $|a-b|<M$, the only multiple of $M$ available is zero, hence $a=b$.
+\end{proof}
+
+The six moduli $\{2,3,5,7,11,13\}$ have product $30030$, which is smaller than the 30720-sample subframe domain.  They therefore do not provide an exact identifier on that domain.  A concrete collision is
+\begin{equation}
+    R(690)=R(30720),\qquad 30720-690=30030.
+\end{equation}
+Adding modulus 17 raises the product to $510510$, making the signature collision-free over one 30.72~MHz subframe counter domain.  It does not make the representation globally collision-free: $R(n)=R(n+510510)$ remains true.
+
+\subsection{What the signature can and cannot do}
+
+The residue vector can check whether an already measured counter value or externally observed boundary label matches an expected value within a declared bounded domain.  This can be useful when residues are already maintained as distributed state, when a wide value crosses a constrained interface, or when redundant arithmetic state is desired for fault detection.
+
+It cannot, by itself, infer a boundary from received IQ samples, estimate carrier-frequency offset, resolve multipath, or distinguish events separated by its modulus product.  Those are synchronization or estimation problems and require observations of signal content.  A sum of absolute residue differences is also not a physical drift estimator: it is not monotone in $|a-b|$ and wraps independently in each component.  The repository therefore uses exact signature equality and does not assign metric meaning to such a score.
+
+\subsection{The relevant computational baseline}
+
+If both values are already available as ordinary integers, the direct test $a=b$ is the correct baseline.  It requires one integer comparison, while Eq.~\eqref{eq:signature} requires several remainder operations or separately maintained counters.  The accompanying software benchmark accordingly compares direct equality with residue-vector construction; it does not compare them with a correlation algorithm that solves a different problem.  On the recorded environment, the median residue check was \input{../data/benchmark_ratio.tex} times slower than direct equality.  The numerical ratio is environment-dependent, but the semantic conclusion is not: a software speed advantage over equality is not supported.
+
+Any hardware claim must be stated conditionally.  If the residues already exist and update incrementally, a distributed comparison may offer timing or fault-containment advantages.  If they must be added solely for boundary checking, a binary counter and equality comparator may use less state.  Post-synthesis area, power, and maximum-frequency data are required before asserting an implementation advantage.
+
+\section{Reference Implementations and Verification}
+
+The repository contains three mutually checking artifacts.
+
+\paragraph{Python timing model.}
+The module \texttt{src/nr\_timing.py} implements Eqs.~\eqref{eq:symbolbase}--\eqref{eq:slotlength} in integer $T_c$ ticks, projects to the 30.72~MHz grid for $\mu\leq4$, constructs exact boundary sets, and evaluates residue signatures.
+
+\paragraph{Automated tests.}
+The test suite verifies: (i) that every $\mu=0,\ldots,6$ schedule sums to exactly one subframe; (ii) that boundary nesting holds for all ordered numerology pairs; (iii) that the exact $\mu=2,3,4$ slot lengths differ from their averages; (iv) that the physical boundary set is not additively closed; and (v) that the original six-modulus construction has the stated collision.
+
+\paragraph{VHDL boundary monitor.}
+The entity \texttt{nr\_boundary\_monitor} targets the 30.72~MHz reference grid for normal CP and $\mu=0,\ldots,4$.  It accepts an \texttt{observed\_boundary} input from an external detector and compares that event with the exact boundary table.  Separate outputs report missing and unexpected events.  This interface corrects the circular design in which a module generated its own expected event and then treated internal counter state as if it were an independent observation.  The supplied testbench covers aligned operation, an unexpected event, and a missing event.  No resource or one-cycle-drift-estimation claim is made without synthesis evidence.
+
+\section{Discussion and Limitations}
+
+The exact result is a nesting theorem for boundary sets plus an injective hierarchy for abstract slot-index groups.  It is not a discovery that the standard supports power-of-two slot scaling; that design fact is explicit in 3GPP specifications.  The contribution is the separation of index algebra, physical CP timing, and implementation grids, together with a reproducible demonstration of where naive identification of those objects fails.
+
+The analysis is limited to normal CP.  Extended CP at $\mu=2$ requires its own symbol count and timing schedule.  The 30.72~MHz tables are reference-grid calculations, not requirements on an NR implementation's converter or baseband sampling rate.  The VHDL monitor assumes that reset establishes the subframe origin and that \texttt{numerology} is valid for the current subframe.  It checks boundary integrity after an external timing source exists; it does not acquire that source.
+
+The residue construction is likewise a representation theorem rather than a demonstrated receiver optimization.  A future hardware study would need at least a binary-counter baseline, identical interface semantics, synthesis for a named FPGA or ASIC library, post-place-and-route timing, power estimation, and fault-injection experiments.  Until those data exist, the code should be read as a transparent reference implementation.
+
+\section{Conclusion}
+
+An exact treatment of 5G NR timing must include the cyclic-prefix extension schedule.  In the fundamental $T_c$ grid, normal-CP slot boundaries can be computed without approximation for every standardized $\mu$ from 0 through 6.  These boundary sets are nested, yet they are not additive subgroups of the subframe clock.  Cyclic groups correctly describe abstract slot indices, and their embeddings commute with the physical boundary maps without turning those maps into homomorphisms.
+
+The prime value 137 at $\mu=4$ is a valid arithmetic observation on the 30.72~MHz reference grid, but it does not establish a hardware anomaly.  Residue vectors provide exact bounded signatures only when their modulus product exceeds the declared domain; they neither replace signal-based synchronization nor outperform direct integer equality in the supplied software benchmark.  The accompanying tests and VHDL monitor preserve the useful arithmetic observations while making their scope and evidence explicit.
+
+\section*{Data and Code Availability}
+
+All equations, tables, tests, benchmark code, and VHDL sources needed to reproduce the reported results are included in the associated public repository.  Release-specific citation metadata are provided in \texttt{CITATION.cff}.
+
+\begin{thebibliography}{9}
+
+\bibitem{etsi38211}
+ETSI, ``5G; NR; Physical channels and modulation (3GPP TS 38.211 version 18.7.0 Release 18),'' ETSI TS 138 211 V18.7.0, July 2025. [Online]. Available: \url{https://www.etsi.org/deliver/etsi_ts/138200_138299/138211/18.07.00_60/ts_138211v180700p.pdf}
+
+\bibitem{schmidl1997}
+T. M. Schmidl and D. C. Cox, ``Robust frequency and timing synchronization for OFDM,'' \emph{IEEE Transactions on Communications}, vol. 45, no. 12, pp. 1613--1621, 1997, doi: \href{https://doi.org/10.1109/26.650240}{10.1109/26.650240}.
+
+\bibitem{vandebeek1997}
+J. J. van de Beek, M. Sandell, and P. O. B\"orjesson, ``ML estimation of time and frequency offset in OFDM systems,'' \emph{IEEE Transactions on Signal Processing}, vol. 45, no. 7, pp. 1800--1805, 1997, doi: \href{https://doi.org/10.1109/78.599949}{10.1109/78.599949}.
+
+\bibitem{soderstrand1986}
+M. A. Soderstrand, W. K. Jenkins, G. A. Jullien, and F. J. Taylor, Eds., \emph{Residue Number System Arithmetic: Modern Applications in Digital Signal Processing}. New York, NY, USA: IEEE Press, 1986.
+
+\end{thebibliography}
+
+\end{document}

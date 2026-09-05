@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+manuscript/*.aux
+manuscript/*.log
+manuscript/*.out
+manuscript/*.toc
+manuscript/*.synctex.gz
+manuscript/*.fls
+manuscript/*.fdb_latexmk
+
+*.cf
+*.ghw
+

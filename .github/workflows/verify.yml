@@ -1,0 +1,26 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests -v
+      - run: python src/benchmark.py
+
+  vhdl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ghdl
+      - run: ghdl -a --std=08 hdl/nr_boundary_monitor.vhd hdl/tb_nr_boundary_monitor.vhd
+      - run: ghdl -e --std=08 tb_nr_boundary_monitor
+      - run: ghdl -r --std=08 tb_nr_boundary_monitor --assert-level=error
+
